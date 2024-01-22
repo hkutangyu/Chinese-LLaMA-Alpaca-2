@@ -6,20 +6,22 @@ lora_alpha=128
 lora_trainable="q_proj,v_proj,k_proj,o_proj,gate_proj,down_proj,up_proj"
 modules_to_save="embed_tokens,lm_head"
 lora_dropout=0.05
+export NCCL_P2P_DISABLE="1"
+export NCCL_IB_DISABLE="1"
 
-pretrained_model=path/to/hf/llama-2/or/chinese-llama-2/dir/or/model_id
-chinese_tokenizer_path=path/to/chinese-llama-2/tokenizer/dir
-dataset_dir=path/to/sft/data/dir
+pretrained_model=/home/tangyu/huggingface_download/chinese-alpaca-2-7b-16k
+chinese_tokenizer_path=/home/tangyu/huggingface_download/chinese-alpaca-2-7b-16k
+dataset_dir=/home/tangyu/huggingface_download/ft_data
 per_device_train_batch_size=1
 per_device_eval_batch_size=1
 gradient_accumulation_steps=8
-max_seq_length=512
-output_dir=output_dir
-validation_file=validation_file_name
+max_seq_length=2048
+output_dir=/home/tangyu/huggingface_download/ft_202401221751
+validation_file=/home/tangyu/huggingface_download/ft_data/validate_ft20240119.json
 
 deepspeed_config_file=ds_zero2_no_offload.json
 
-torchrun --nnodes 1 --nproc_per_node 1 run_clm_sft_with_peft.py \
+torchrun --nnodes 1 --nproc_per_node 4 run_clm_sft_with_peft.py \
     --deepspeed ${deepspeed_config_file} \
     --model_name_or_path ${pretrained_model} \
     --tokenizer_name_or_path ${chinese_tokenizer_path} \
@@ -56,7 +58,7 @@ torchrun --nnodes 1 --nproc_per_node 1 run_clm_sft_with_peft.py \
     --modules_to_save ${modules_to_save} \
     --torch_dtype float16 \
     --validation_file ${validation_file} \
-    --load_in_kbits 16 \
+    --load_in_kbits 8 \
     --save_safetensors False \
     --gradient_checkpointing \
     --ddp_find_unused_parameters False

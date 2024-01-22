@@ -561,8 +561,8 @@ setup()
 # Create the Gradio interface
 with gr.Blocks() as demo:
     github_banner_path = 'https://raw.githubusercontent.com/ymcui/Chinese-LLaMA-Alpaca-2/main/pics/banner.png'
-    gr.HTML(f'<p align="center"><a href="https://github.com/ymcui/Chinese-LLaMA-Alpaca-2"><img src={github_banner_path} width="700"/></a></p>')
-    chatbot = gr.Chatbot()
+    # gr.HTML(f'<p align="center"><a href="https://github.com/ymcui/Chinese-LLaMA-Alpaca-2"><img src={github_banner_path} width="700"/></a></p>')
+    chatbot = gr.Chatbot(show_copy_button=True, height=720)
     with gr.Row():
         with gr.Column(scale=4):
             with gr.Column(scale=3):
@@ -593,7 +593,7 @@ with gr.Blocks() as demo:
             max_new_token = gr.Slider(
                 0,
                 4096,
-                value=512,
+                value=4096,
                 step=1.0,
                 label="Maximum New Token Length",
                 interactive=True)
