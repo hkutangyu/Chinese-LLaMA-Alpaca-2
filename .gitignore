@@ -2,3 +2,6 @@
 */.DS_Store
 __pycache__
 *.out
+training_data
+.env
+ft_*
