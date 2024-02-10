@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from threading import Thread
 from sse_starlette.sse import EventSourceResponse
+from decouple import config as decouple_config
 
 
 parser = argparse.ArgumentParser()
@@ -381,4 +382,5 @@ if __name__ == "__main__":
     log_config["formatters"]["default"][
         "fmt"
     ] = "%(asctime)s - %(levelname)s - %(message)s"
-    uvicorn.run(app, host="0.0.0.0", port=19327, workers=1, log_config=log_config)
+    fast_port = decouple_config("FAST_PORT", default=19327, cast=int)
+    uvicorn.run(app, host="0.0.0.0", port=fast_port, workers=1, log_config=log_config)
