@@ -5,3 +5,4 @@ __pycache__
 training_data
 .env
 ft_*
+pt_*

@@ -8,6 +8,7 @@ modules_to_save="embed_tokens,lm_head"
 lora_dropout=0.05
 export NCCL_P2P_DISABLE="1"
 export NCCL_IB_DISABLE="1"
+export CUDA_VISIBLE_DEVICES="1,3"
 
 pretrained_model=/home/tangyu/GitProjects/huggingface_download/chinese-alpaca-2-7b-16k-hf
 chinese_tokenizer_path=/home/tangyu/GitProjects/huggingface_download/chinese-alpaca-2-7b-16k-hf
@@ -15,8 +16,8 @@ dataset_dir=/home/tangyu/GitProjects/Chinese-LLaMA-Alpaca-2/training_data/sample
 per_device_train_batch_size=1
 per_device_eval_batch_size=1
 gradient_accumulation_steps=8
-max_seq_length=2048
-output_dir=/home/tangyu/GitProjects/Chinese-LLaMA-Alpaca-2/ft_news_od_20240209001900
+max_seq_length=1024
+output_dir=/home/tangyu/GitProjects/Chinese-LLaMA-Alpaca-2/ft_gx_20240222005450
 validation_file=/home/tangyu/GitProjects/Chinese-LLaMA-Alpaca-2/training_data/samples/validating_set.json
 
 deepspeed_config_file=ds_zero2_no_offload.json
@@ -32,7 +33,7 @@ torchrun --nnodes 1 --nproc_per_node 2 run_clm_sft_with_peft.py \
     --do_eval \
     --seed $RANDOM \
     --fp16 \
-    --num_train_epochs 15 \
+    --num_train_epochs 10 \
     --lr_scheduler_type cosine \
     --learning_rate ${lr} \
     --warmup_ratio 0.03 \
