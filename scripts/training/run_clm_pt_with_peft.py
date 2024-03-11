@@ -503,6 +503,7 @@ def main():
         return result
     with training_args.main_process_first(desc="dataset map tokenization and grouping"):
         lm_datasets = []
+        lm_datasets_list = []
         path = Path(data_args.dataset_dir)
         files = [file.name for file in path.glob("*.txt")]
         if training_args.debug_mode is True:
@@ -542,10 +543,13 @@ def main():
                 processed_dataset = grouped_datasets
                 processed_dataset.save_to_disk(cache_path)
             if idx == 0:
-                lm_datasets = processed_dataset['train']
+                # lm_datasets = processed_dataset['train']
+                lm_datasets_list.append(processed_dataset['train'])
             else:
-                assert lm_datasets.features.type == processed_dataset["train"].features.type
-                lm_datasets = concatenate_datasets([lm_datasets, processed_dataset["train"]])
+                # assert lm_datasets.features.type == processed_dataset["train"].features.type
+                # lm_datasets = concatenate_datasets([lm_datasets, processed_dataset["train"]])
+                lm_datasets_list.append(processed_dataset['train'])
+        lm_datasets = concatenate_datasets(lm_datasets_list)
         lm_datasets = lm_datasets.train_test_split(test_size = data_args.validation_split_percentage)
 
     if training_args.do_train:

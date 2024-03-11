@@ -1,0 +1,1 @@
+python scripts/openai_server_demo/openai_api_server.py --base_model /home/tangyu/GitProjects/Chinese-LLaMA-Alpaca-2/ft_all_20240301153045_full --gpus 2

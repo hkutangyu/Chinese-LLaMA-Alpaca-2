@@ -6,7 +6,10 @@ import uvicorn
 from threading import Thread
 from sse_starlette.sse import EventSourceResponse
 from decouple import config as decouple_config
-
+import asyncio
+from transformers import StoppingCriteria, StoppingCriteriaList
+import time
+import threading
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--base_model', default=None, type=str, required=True)
@@ -40,6 +43,15 @@ from transformers import (
 from peft import PeftModel
 
 import sys
+
+class StopOnEvent(StoppingCriteria):
+    def __init__(self) -> None:
+        self.is_stop = False
+        super().__init__()
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+        if self.is_stop:
+            return True
+        return False
 
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
@@ -311,13 +323,158 @@ app.add_middleware(
 @app.post("/v1/chat/completions")
 async def create_chat_completion(request: ChatCompletionRequest):
     """Creates a completion for the chat message"""
+    async def event_publisher(
+        input,
+        max_new_tokens=128,
+        top_p=0.75,
+        temperature=0.1,
+        top_k=40,
+        num_beams=4,
+        repetition_penalty=1.0,
+        do_sample=True,
+        model_id="chinese-llama-alpaca-2",
+        **kwargs,
+    ):
+        choice_data = ChatCompletionResponseStreamChoice(
+            index=0, delta=DeltaMessage(role="assistant"), finish_reason=None
+        )
+        chunk = ChatCompletionResponse(
+            model=model_id,
+            choices=[choice_data],
+            object="chat.completion.chunk",
+        )
+        yield "{}".format(chunk.json(exclude_unset=True, ensure_ascii=False))
+
+        if isinstance(input, str):
+            prompt = generate_completion_prompt(input)
+        else:
+            prompt = generate_chat_prompt(input)
+        inputs = tokenizer(prompt, return_tensors="pt")
+        input_ids = inputs["input_ids"].to(device)
+        generation_config = GenerationConfig(
+            temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
+            num_beams=num_beams,
+            do_sample=do_sample,
+            **kwargs,
+        )
+
+        streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
+        stop = StopOnEvent()
+        generation_kwargs = dict(
+            streamer=streamer,
+            input_ids=input_ids,
+            generation_config=generation_config,
+            return_dict_in_generate=True,
+            output_scores=False,
+            max_new_tokens=max_new_tokens,
+            repetition_penalty=float(repetition_penalty),
+            stopping_criteria=StoppingCriteriaList([stop])
+        )
+        i = 0
+        Thread(target=model.generate, kwargs=generation_kwargs).start()
+        try:
+          for new_text in streamer:
+            choice_data = ChatCompletionResponseStreamChoice(
+                    index=0, delta=DeltaMessage(content=new_text), finish_reason=None
+                )
+            chunk = ChatCompletionResponse(
+                model=model_id, choices=[choice_data], object="chat.completion.chunk"
+            )
+            chunk_str = "{}".format(chunk.json(exclude_unset=True, ensure_ascii=False))
+            i += 1
+            yield chunk_str
+            await asyncio.sleep(0.03)
+        except asyncio.CancelledError as e:
+            print(f"Disconnected from client (via refresh/close)")
+            # Do any other cleanup, if any
+            stop.is_stop = True
+            raise e
+    
+    async def a_stream_predict(
+        input,
+        max_new_tokens=128,
+        top_p=0.75,
+        temperature=0.1,
+        top_k=40,
+        num_beams=4,
+        repetition_penalty=1.0,
+        do_sample=True,
+        model_id="chinese-llama-alpaca-2",
+        **kwargs,
+    ):
+        try:
+            choice_data = ChatCompletionResponseStreamChoice(
+                index=0, delta=DeltaMessage(role="assistant"), finish_reason=None
+            )
+            chunk = ChatCompletionResponse(
+                model=model_id,
+                choices=[choice_data],
+                object="chat.completion.chunk",
+            )
+            yield "{}".format(chunk.json(exclude_unset=True, ensure_ascii=False))
+
+            if isinstance(input, str):
+                prompt = generate_completion_prompt(input)
+            else:
+                prompt = generate_chat_prompt(input)
+            inputs = tokenizer(prompt, return_tensors="pt")
+            input_ids = inputs["input_ids"].to(device)
+            generation_config = GenerationConfig(
+                temperature=temperature,
+                top_p=top_p,
+                top_k=top_k,
+                num_beams=num_beams,
+                do_sample=do_sample,
+                **kwargs,
+            )
+
+            streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
+            stop = StopOnEvent()
+            generation_kwargs = dict(
+                streamer=streamer,
+                input_ids=input_ids,
+                generation_config=generation_config,
+                return_dict_in_generate=True,
+                output_scores=False,
+                max_new_tokens=max_new_tokens,
+                repetition_penalty=float(repetition_penalty),
+                stopping_criteria=StoppingCriteriaList([stop])
+            )
+            Thread(target=model.generate, kwargs=generation_kwargs).start()
+            
+            for new_text in streamer:
+                choice_data = ChatCompletionResponseStreamChoice(
+                    index=0, delta=DeltaMessage(content=new_text), finish_reason=None
+                )
+                chunk = ChatCompletionResponse(
+                    model=model_id, choices=[choice_data], object="chat.completion.chunk"
+                )
+                yield "{}".format(chunk.json(exclude_unset=True, ensure_ascii=False))
+                await asyncio.sleep(0.03)
+                print(new_text)
+            choice_data = ChatCompletionResponseStreamChoice(
+                index=0, delta=DeltaMessage(), finish_reason="stop"
+            )
+            chunk = ChatCompletionResponse(
+                model=model_id, choices=[choice_data], object="chat.completion.chunk"
+            )
+            yield "{}".format(chunk.json(exclude_unset=True, ensure_ascii=False))
+            yield "[DONE]"
+        except Exception as e:
+            print("客户端断开连接")
+            stop.is_stop = True
+            print(e)
+            raise e
+        
     msgs = request.messages
     if isinstance(msgs, str):
         msgs = [ChatMessage(role="user", content=msgs)]
     else:
         msgs = [ChatMessage(role=x["role"], content=x["content"]) for x in msgs]
     if request.stream:
-        generate = stream_predict(
+        generate = event_publisher(
             input=msgs,
             max_new_tokens=request.max_tokens,
             top_p=request.top_p,

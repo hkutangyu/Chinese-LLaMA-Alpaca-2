@@ -1,6 +1,6 @@
 # 运行脚本前请仔细阅读wiki(https://github.com/ymcui/Chinese-LLaMA-Alpaca-2/wiki/pt_scripts_zh)
 # Read the wiki(https://github.com/ymcui/Chinese-LLaMA-Alpaca-2/wiki/pt_scripts_zh) carefully before running the script
-lr=2e-4
+lr=2e-5
 lora_rank=64
 lora_alpha=128
 lora_trainable="q_proj,v_proj,k_proj,o_proj,gate_proj,down_proj,up_proj"
@@ -12,12 +12,12 @@ export CUDA_VISIBLE_DEVICES="1,3"
 
 pretrained_model=/home/tangyu/GitProjects/huggingface_download/chinese-alpaca-2-7b-16k-hf
 chinese_tokenizer_path=/home/tangyu/GitProjects/huggingface_download/chinese-alpaca-2-7b-16k-hf
-dataset_dir=/home/tangyu/GitProjects/Chinese-LLaMA-Alpaca-2/training_data/pt_samples
-data_cache=/home/tangyu/GitProjects/Chinese-LLaMA-Alpaca-2/training_data/pt_samples_cache
+dataset_dir=/mnt/sq_datasets/flat_txt
+data_cache=/home/tangyu/GitProjects/Chinese-LLaMA-Alpaca-2/training_data/flat_txt_cache
 per_device_train_batch_size=1
 gradient_accumulation_steps=8
 block_size=512
-output_dir=/home/tangyu/GitProjects/Chinese-LLaMA-Alpaca-2/pt_od_20240223112749
+output_dir=/home/tangyu/GitProjects/Chinese-LLaMA-Alpaca-2/pt_od_20240228105550
 
 deepspeed_config_file=ds_zero2_no_offload.json
 
@@ -32,7 +32,7 @@ torchrun --nnodes 1 --nproc_per_node 2 run_clm_pt_with_peft.py \
     --do_train \
     --seed $RANDOM \
     --fp16 \
-    --num_train_epochs 4 \
+    --num_train_epochs 1 \
     --lr_scheduler_type cosine \
     --learning_rate ${lr} \
     --warmup_ratio 0.05 \
@@ -43,7 +43,7 @@ torchrun --nnodes 1 --nproc_per_node 2 run_clm_pt_with_peft.py \
     --save_total_limit 3 \
     --save_steps 200 \
     --gradient_accumulation_steps ${gradient_accumulation_steps} \
-    --preprocessing_num_workers 8 \
+    --preprocessing_num_workers 1 \
     --block_size ${block_size} \
     --output_dir ${output_dir} \
     --overwrite_output_dir \
