@@ -8,16 +8,16 @@ modules_to_save="embed_tokens,lm_head"
 lora_dropout=0.05
 export NCCL_P2P_DISABLE="1"
 export NCCL_IB_DISABLE="1"
-export CUDA_VISIBLE_DEVICES="1,3"
+export CUDA_VISIBLE_DEVICES="0,1"
 
 pretrained_model=/home/tangyu/GitProjects/huggingface_download/chinese-alpaca-2-7b-16k-hf
 chinese_tokenizer_path=/home/tangyu/GitProjects/huggingface_download/chinese-alpaca-2-7b-16k-hf
-dataset_dir=/mnt/sq_datasets/flat_txt
-data_cache=/home/tangyu/GitProjects/Chinese-LLaMA-Alpaca-2/training_data/flat_txt_cache
+dataset_dir=/mnt/sq_datasets/flat_content
+data_cache=/mnt/sq_datasets/flat_txt_cache
 per_device_train_batch_size=1
 gradient_accumulation_steps=8
 block_size=512
-output_dir=/home/tangyu/GitProjects/Chinese-LLaMA-Alpaca-2/pt_od_20240228105550
+output_dir=/home/tangyu/GitProjects/Chinese-LLaMA-Alpaca-2/pt_od_20240511155503
 
 deepspeed_config_file=ds_zero2_no_offload.json
 

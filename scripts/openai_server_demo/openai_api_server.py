@@ -469,11 +469,14 @@ async def create_chat_completion(request: ChatCompletionRequest):
             raise e
         
     msgs = request.messages
+    print(f"origin_msg={msgs}")
     if isinstance(msgs, str):
         msgs = [ChatMessage(role="user", content=msgs)]
     else:
         msgs = [ChatMessage(role=x["role"], content=x["content"]) for x in msgs]
+    
     if request.stream:
+        print(f"msgs={msgs}")
         generate = event_publisher(
             input=msgs,
             max_new_tokens=request.max_tokens,
