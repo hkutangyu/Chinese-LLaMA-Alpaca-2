@@ -6,23 +6,24 @@ lora_alpha=128
 lora_trainable="q_proj,v_proj,k_proj,o_proj,gate_proj,down_proj,up_proj"
 modules_to_save="embed_tokens,lm_head"
 lora_dropout=0.05
+source .env
 export NCCL_P2P_DISABLE="1"
 export NCCL_IB_DISABLE="1"
-export CUDA_VISIBLE_DEVICES="1,3"
+export CUDA_VISIBLE_DEVICES="1,2,3"
 
-pretrained_model=/home/tangyu/GitProjects/Chinese-LLaMA-Alpaca-2/pt_od_20240228105550_full
-chinese_tokenizer_path=/home/tangyu/GitProjects/Chinese-LLaMA-Alpaca-2/pt_od_20240228105550_full
-dataset_dir=/home/tangyu/GitProjects/Chinese-LLaMA-Alpaca-2/training_data/samples
+pretrained_model=${PRETRAINED_MODEL}
+chinese_tokenizer_path=${pretrained_model}
+dataset_dir=${SFT_JSON_TRAINING_SET_PATH}
 per_device_train_batch_size=1
 per_device_eval_batch_size=1
 gradient_accumulation_steps=8
 max_seq_length=2048
-output_dir=/home/tangyu/GitProjects/Chinese-LLaMA-Alpaca-2/ft_cl_20240304121055
-validation_file=/home/tangyu/GitProjects/Chinese-LLaMA-Alpaca-2/training_data/samples/validating_set.json
+output_dir=${SFT_OUTPUT_DIR}
+validation_file=${SFT_JSON_VALIDATION}
 
 deepspeed_config_file=ds_zero2_no_offload.json
 
-torchrun --nnodes 1 --nproc_per_node 2 run_clm_sft_with_peft.py \
+torchrun --nnodes 1 --nproc_per_node 3 run_clm_sft_with_peft.py \
     --deepspeed ${deepspeed_config_file} \
     --model_name_or_path ${pretrained_model} \
     --tokenizer_name_or_path ${chinese_tokenizer_path} \
@@ -33,7 +34,7 @@ torchrun --nnodes 1 --nproc_per_node 2 run_clm_sft_with_peft.py \
     --do_eval \
     --seed $RANDOM \
     --fp16 \
-    --num_train_epochs 10 \
+    --num_train_epochs 2 \
     --lr_scheduler_type cosine \
     --learning_rate ${lr} \
     --warmup_ratio 0.03 \
